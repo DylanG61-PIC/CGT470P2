@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Oceanus Folk Explorer | CGT 470 Group 5</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+
+<style>
+:root {
+  --bg: #f3f6fa;
+  --ink: #1c2b40;
+  --muted: #64748b;
+  --line: #dce4ee;
+  --navy: #14243d;
+  --teal: #168c8c;
+  --blue: #4472c4;
+  --gold: #d79b28;
+  --purple: #8b6bc1;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font: 14px/1.5 Arial, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+header {
+  background: linear-gradient(115deg, #14243d, #244e67);
+  color: white;
+  padding: 23px 26px;
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+h1 { margin: 0 0 4px; font-size: 26px; }
+header p { margin: 0; color: #d3e4ef; }
+
+.tag {
+  border: 1px solid #7da0b4;
+  border-radius: 999px;
+  padding: 7px 11px;
+  font-size: 11px;
+}
+
+main {
+  max-width: 1450px;
+  margin: auto;
+  padding: 18px;
+  display: grid;
+  gap: 15px;
+}
+
+.panel, .stat, .controls {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 3px 12px #172b4308;
+}
+
+.controls {
+  padding: 14px;
+  display: grid;
+  grid-template-columns: 2fr 1fr 1.3fr 1fr auto;
+  gap: 10px;
+  align-items: end;
+}
+
+label {
+  display: block;
+  font-size: 11px;
+  font-weight: bold;
+  color: #526176;
+  margin-bottom: 5px;
+}
+
+input, select, button {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  background: white;
+  color: var(--ink);
+  font: inherit;
+}
+
+button {
+  background: var(--navy);
+  color: white;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 11px;
+}
+
+.stat { padding: 13px 15px; }
+.num { font-size: 24px; font-weight: bold; }
+.desc, .hint, .note { font-size: 12px; color: var(--muted); }
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(300px, .8fr);
+  gap: 15px;
+}
+
+.panel { overflow: hidden; }
+
+.panel-head {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.panel-head h2 { margin: 0; font-size: 17px; }
+
+.network-wrap {
+  height: 510px;
+  background: radial-gradient(circle, #fff, #f8fbff);
+}
+
+#network {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.legend {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 11px 15px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+}
+
+.dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-right: 5px;
+}
+
+.detail { padding: 17px; }
+.detail h3 { font-size: 21px; margin: 0 0 3px; }
+
+.pill {
+  display: inline-block;
+  padding: 3px 7px;
+  border-radius: 99px;
+  background: #e7f3f4;
+  color: #146a70;
+  font-size: 11px;
+  font-weight: bold;
+  margin: 4px 4px 3px 0;
+}
+
+.kv {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 0;
+  border-bottom: 1px solid #edf1f6;
+}
+
+.kv span { color: var(--muted); }
+.section { margin-top: 17px; }
+
+.section h4 {
+  font-size: 11px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 7px;
+}
+
+.neighbor {
+  background: #edf3f9;
+  color: #14243d;
+  border: 1px solid #dce4ee;
+  text-align: left;
+  margin: 3px;
+  padding: 6px 8px;
+  font-size: 11px;
+  width: auto;
+}
+
+.notice {
+  padding: 11px 13px;
+  border-radius: 9px;
+  background: #fff8e8;
+  border: 1px solid #f1d9a0;
+  color: #77531b;
+  font-size: 12px;
+}
+
+.timeline { padding: 8px 16px 12px; }
+
+#timeline {
+  width: 100%;
+  height: 190px;
+  display: block;
+}
+
+.node-label {
+  font-size: 10px;
+  pointer-events: none;
+  fill: #334155;
+}
+
+.link { stroke: #a8b7c9; stroke-opacity: .55; }
+
+.footer { font-size: 12px; color: var(--muted); }
+
+@media(max-width: 900px) {
+  .controls { grid-template-columns: 1fr 1fr; }
+  .layout { grid-template-columns: 1fr; }
+  .stats { grid-template-columns: 1fr 1fr; }
+  .network-wrap { height: 430px; }
+}
+
+@media(max-width: 520px) {
+  main { padding: 10px; }
+  .controls { grid-template-columns: 1fr; }
+  .stats { gap: 7px; }
+  .stat { padding: 10px; }
+  header { padding: 17px; }
+}
+</style>
+</head>
+
+<body>
+<header>
+  <div>
+    <h1>Oceanus Folk Explorer</h1>
+    <p>CGT 470 · Group 5 · Interactive music-relationship network</p>
+  </div>
+  <span class="tag">D3.JS PROTOTYPE</span>
+</header>
+
+<main>
+  <section class="controls">
+    <div>
+      <label for="search">SEARCH ENTITY</label>
+      <input id="search" placeholder="Try Sailor Shift…">
+    </div>
+
+    <div>
+      <label for="typeFilter">ENTITY TYPE</label>
+      <select id="typeFilter">
+        <option value="All">All types</option>
+        <option>Person</option>
+        <option>Song</option>
+        <option>Album</option>
+        <option>MusicalGroup</option>
+        <option>RecordLabel</option>
+      </select>
+    </div>
+
+    <div>
+      <label for="relationFilter">RELATIONSHIP TYPE</label>
+      <select id="relationFilter">
+        <option value="All">All relationships</option>
+        <option>PerformerOf</option>
+        <option>LyricistOf</option>
+        <option>ComposerOf</option>
+        <option>InStyleOf</option>
+        <option>MemberOf</option>
+        <option>RecordedBy</option>
+        <option>CollaboratesWith</option>
+      </select>
+    </div>
+
+    <div>
+      <label for="yearFilter">RELEASE YEAR</label>
+      <select id="yearFilter">
+        <option value="All">All years</option>
+      </select>
+    </div>
+
+    <button id="reset">Reset</button>
+  </section>
+
+  <section class="stats">
+    <div class="stat">
+      <div class="num" id="nodeCount">—</div>
+      <div class="desc">Visible entities</div>
+    </div>
+
+    <div class="stat">
+      <div class="num" id="linkCount">—</div>
+      <div class="desc">Visible relationships</div>
+    </div>
+
+    <div class="stat">
+      <div class="num">17,412</div>
+      <div class="desc">Dataset nodes reported in project analysis</div>
+    </div>
+
+    <div class="stat">
+      <div class="num">37,857</div>
+      <div class="desc">Dataset links reported in project analysis</div>
+    </div>
+  </section>
+
+  <div class="notice">
+    <strong>Data connection:</strong>
+    Load your original MC1 graph JSON file using the file picker below.
+    The visualization uses the node IDs, names, types, genres, release dates,
+    and relationship types from that file.
+  </div>
+
+  <section class="panel" style="padding:13px 15px">
+    <label for="jsonFile">LOAD YOUR MC1 GRAPH JSON</label>
+    <input type="file" id="jsonFile" accept=".json,application/json">
+    <div id="loadStatus" class="hint" style="margin-top:7px">
+      Choose the original graph JSON file to load your project data.
+    </div>
+  </section>
+
+  <section class="layout">
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Network overview</h2>
+        <div class="hint">
+          Click a node to highlight direct relationships.
+          Drag nodes; scroll to zoom.
+        </div>
+      </div>
+
+      <div class="network-wrap">
+        <svg id="network" role="img" aria-label="Interactive graph network"></svg>
+      </div>
+
+      <div class="legend">
+        <span><i class="dot" style="background:#4472c4"></i>Person</span>
+        <span><i class="dot" style="background:#168c8c"></i>Song</span>
+        <span><i class="dot" style="background:#d79b28"></i>Album</span>
+        <span><i class="dot" style="background:#8b6bc1"></i>Musical group</span>
+        <span><i class="dot" style="background:#64748b"></i>Record label</span>
+      </div>
+    </div>
+
+    <aside class="panel">
+      <div class="panel-head">
+        <h2>Entity details</h2>
+        <div class="hint">Details update when you select a node.</div>
+      </div>
+
+      <div class="detail" id="details">
+        <p class="hint">
+          Load your graph JSON, then click a node to see its details.
+        </p>
+      </div>
+    </aside>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Oceanus Folk release timeline</h2>
+      <div class="hint">
+        Counts are calculated from nodes whose genre contains “Oceanus Folk”.
+        Click a year to filter.
+      </div>
+    </div>
+
+    <div class="timeline">
+      <svg id="timeline" role="img" aria-label="Oceanus Folk release timeline"></svg>
+    </div>
+  </section>
+
+  <p class="footer">
+    Large-network strategy: the prototype displays a filtered subset for
+    readability instead of drawing all 17,412 nodes at once. Connections
+    represent recorded relationships and do not automatically prove causation
+    or future success.
+  </p>
+</main>
+
+<script>
+const colors = {
+  Person: "#4472c4",
+  Song: "#168c8c",
+  Album: "#d79b28",
+  MusicalGroup: "#8b6bc1",
+  RecordLabel: "#64748b"
+};
+
+let allNodes = [];
+let allLinks = [];
+let selectedId = null;
+let simulation = null;
+let loaded = false;
+
+const svg = d3.select("#network");
+const timelineSvg = d3.select("#timeline");
+
+const typeValue = n => n["Node Type"] || n.type || "Unknown";
+const nameValue = n => String(n.name ?? n.label ?? n.id);
+const edgeValue = e => e["Edge Type"] || e.type || "Unknown";
+const genreValue = n => String(n.genre || "");
+
+const yearValue = n => {
+  const s = String(n.release_date || n.releaseDate || n.year || "");
+  const m = s.match(/\d{4}/);
+  return m ? Number(m[0]) : null;
+};
+
+function esc(value) {
+  return String(value ?? "").replace(/[&<>"']/g, c => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[c]));
+}
+
+function setStatus(message) {
+  document.getElementById("loadStatus").textContent = message;
+}
+
+document.getElementById("jsonFile").addEventListener("change", async event => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  try {
+    const data = JSON.parse(await file.text());
+
+    if (!Array.isArray(data.nodes) || !Array.isArray(data.links)) {
+      throw new Error("JSON must contain arrays named nodes and links.");
+    }
+
+    allNodes = data.nodes
+      .filter(n => n.id !== undefined && n.id !== null)
+      .map(n => ({ ...n, id: String(n.id) }));
+
+    const ids = new Set(allNodes.map(n => n.id));
+
+    allLinks = data.links
+      .filter(e =>
+        ids.has(String(typeof e.source === "object" ? e.source.id : e.source)) &&
+        ids.has(String(typeof e.target === "object" ? e.target.id : e.target))
+      )
+      .map((e, i) => ({
+        ...e,
+        _source: String(typeof e.source === "object" ? e.source.id : e.source),
+        _target: String(typeof e.target === "object" ? e.target.id : e.target),
+        _id: i
+      }));
+
+    allNodes.forEach(n => {
+      n.name = nameValue(n);
+      n._type = typeValue(n);
+      n._year = yearValue(n);
+    });
+
+    const years = [...new Set(
+      allNodes.map(n => n._year).filter(Boolean)
+    )].sort((a, b) => a - b);
+
+    const yearSelect = document.getElementById("yearFilter");
+    yearSelect.innerHTML =
+      '<option value="All">All years</option>' +
+      years.map(y => `<option value="${y}">${y}</option>`).join("");
+
+    selectedId =
+      allNodes.find(n => n.name.trim().toLowerCase() === "sailor shift")?.id ||
+      allNodes[0]?.id ||
+      null;
+
+    loaded = true;
+
+    setStatus(
+      `Loaded ${file.name}: ${allNodes.length.toLocaleString()} nodes and ` +
+      `${allLinks.length.toLocaleString()} links. The graph view displays a subset for performance.`
+    );
+
+    render();
+  } catch (error) {
+    setStatus("Could not load file: " + error.message);
+  }
+});
+
+function filters() {
+  return {
+    q: document.getElementById("search").value.trim().toLowerCase(),
+    type: document.getElementById("typeFilter").value,
+    rel: document.getElementById("relationFilter").value,
+    year: document.getElementById("yearFilter").value
+  };
+}
+
+function getView() {
+  const f = filters();
+
+  const candidates = allNodes.filter(n =>
+    (f.type === "All" || n._type === f.type) &&
+    (!f.q ||
+      n.name.toLowerCase().includes(f.q) ||
+      genreValue(n).toLowerCase().includes(f.q)) &&
+    (f.year === "All" || String(n._year) === f.year)
+  );
+
+  const selected = candidates.find(n => n.id === selectedId);
+  let subset;
+
+  if (selected) {
+    const neighbors = new Set([selected.id]);
+
+    allLinks.forEach(e => {
+      if (e._source === selected.id) neighbors.add(e._target);
+      if (e._target === selected.id) neighbors.add(e._source);
+    });
+
+    const local = candidates.filter(n => neighbors.has(n.id));
+    subset = local.length ? local : candidates.slice(0, 350);
+  } else {
+    subset = candidates.slice(0, 350);
+  }
+
+  if (subset.length > 350) subset = subset.slice(0, 350);
+
+  const ids = new Set(subset.map(n => n.id));
+
+  const es = allLinks.filter(e =>
+    ids.has(e._source) &&
+    ids.has(e._target) &&
+    (f.rel === "All" || edgeValue(e) === f.rel)
+  );
+
+  return { ns: subset, es };
+}
+
+function render() {
+  if (!loaded) return;
+
+  const { ns, es } = getView();
+  const w = document.querySelector(".network-wrap").clientWidth || 700;
+  const h = 510;
+
+  document.getElementById("nodeCount").textContent = ns.length.toLocaleString();
+  document.getElementById("linkCount").textContent = es.length.toLocaleString();
+
+  if (!ns.some(n => n.id === selectedId)) {
+    selectedId = ns[0]?.id || null;
+  }
+
+  svg.attr("viewBox", `0 0 ${w} ${h}`);
+  svg.selectAll("*").remove();
+
+  if (simulation) simulation.stop();
+
+  const defs = svg.append("defs");
+
+  defs.append("marker")
+    .attr("id", "arrow")
+    .attr("viewBox", "0 -5 10 10")
+    .attr("refX", 18)
+    .attr("refY", 0)
+    .attr("markerWidth", 5)
+    .attr("markerHeight", 5)
+    .attr("orient", "auto")
+    .append("path")
+    .attr("d", "M0,-5L10,0L0,5")
+    .attr("fill", "#a8b7c9");
+
+  const g = svg.append("g");
+
+  svg.call(
+    d3.zoom()
+      .scaleExtent([0.3, 4])
+      .on("zoom", event => g.attr("transform", event.transform))
+  );
+
+  const simLinks = es.map(e => ({
+    _source: e._source,
+    _target: e._target,
+    source: e._source,
+    target: e._target,
+    type: edgeValue(e)
+  }));
+
+  const link = g.append("g")
+    .selectAll("line")
+    .data(simLinks)
+    .join("line")
+    .attr("class", "link")
+    .attr("stroke-width", 1.2)
+    .attr("marker-end", "url(#arrow)");
+
+  const node = g.append("g")
+    .selectAll("g")
+    .data(ns, d => d.id)
+    .join("g")
+    .style("cursor", "pointer")
+    .on("click", (event, d) => {
+      selectedId = d.id;
+      render();
+    });
+
+  node.append("circle")
+    .attr("r", d => d.id === selectedId ? 10 : 6)
+    .attr("fill", d => colors[d._type] || "#64748b")
+    .attr("stroke", d => d.id === selectedId ? "#14243d" : "white")
+    .attr("stroke-width", d => d.id === selectedId ? 3 : 1.5);
+
+  node.append("text")
+    .attr("class", "node-label")
+    .attr("dx", 9)
+    .attr("dy", 3)
+    .text(d => d.name.length > 24 ? d.name.slice(0, 22) + "…" : d.name);
+
+  node.call(
+    d3.drag()
+      .on("start", (event, d) => {
+        if (!event.active) simulation.alphaTarget(0.25).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+      })
+      .on("drag", (event, d) => {
+        d.fx = event.x;
+        d.fy = event.y;
+      })
+      .on("end", (event, d) => {
+        if (!event.active) simulation.alphaTarget(0);
+        d.fx = null;
+        d.fy = null;
+      })
+  );
+
+  simulation = d3.forceSimulation(ns)
+    .force("link", d3.forceLink(simLinks).id(d => d.id).distance(65))
+    .force("charge", d3.forceManyBody().strength(-150))
+    .force("center", d3.forceCenter(w / 2, h / 2))
+    .force("collide", d3.forceCollide(17))
+    .on("tick", () => {
+      link
+        .attr("x1", d => d.source.x)
+        .attr("y1", d => d.source.y)
+        .attr("x2", d => d.target.x)
+        .attr("y2", d => d.target.y);
+
+      node.attr("transform", d => `translate(${d.x},${d.y})`);
+    });
+
+  updateDetails();
+  highlight();
+  drawTimeline();
+}
+
+function updateDetails() {
+  const n = allNodes.find(x => x.id === selectedId);
+  const box = document.getElementById("details");
+
+  if (!n) {
+    box.innerHTML =
+      '<p class="hint">No entity selected. Try another search or clear the filters.</p>';
+    return;
+  }
+
+  const incident = allLinks.filter(
+    e => e._source === n.id || e._target === n.id
+  );
+
+  const outgoing = incident.filter(e => e._source === n.id).length;
+  const incoming = incident.filter(e => e._target === n.id).length;
+  const others = new Map();
+
+  incident.forEach(e => {
+    const otherId = e._source === n.id ? e._target : e._source;
+    const other = allNodes.find(x => x.id === otherId);
+
+    if (other) {
+      const key = otherId + "|" + edgeValue(e);
+      others.set(key, {
+        id: otherId,
+        name: other.name,
+        type: other._type,
+        rel: edgeValue(e),
+        dir: e._source === n.id ? "outgoing" : "incoming"
+      });
+    }
+  });
+
+  const attrs = Object.entries(n)
+    .filter(([k, v]) =>
+      !k.startsWith("_") &&
+      !["id", "name", "Node Type", "genre", "release_date", "notable"].includes(k) &&
+      ["string", "number", "boolean"].includes(typeof v)
+    )
+    .slice(0, 8);
+
+  box.innerHTML = `
+    <h3>${esc(n.name)}</h3>
+    <div class="hint">ID: ${esc(n.id)}</div>
+    <div>
+      <span class="pill">${esc(n._type)}</span>
+      ${n.genre ? `<span class="pill">${esc(n.genre)}</span>` : ""}
+      ${
+        n.notable === true || String(n.notable).toLowerCase() === "true"
+          ? '<span class="pill">Notable</span>'
+          : ""
+      }
+    </div>
+
+    <div class="section">
+      <h4>Relationship summary</h4>
+      <div class="kv"><span>All direct relationships</span><strong>${incident.length}</strong></div>
+      <div class="kv"><span>Outgoing</span><strong>${outgoing}</strong></div>
+      <div class="kv"><span>Incoming</span><strong>${incoming}</strong></div>
+      <div class="kv"><span>Release date</span><strong>${esc(n.release_date || n.releaseDate || n.year || "Not recorded")}</strong></div>
+    </div>
+
+    <div class="section">
+      <h4>Connected entities (${others.size})</h4>
+      <div id="neighbors"></div>
+    </div>
+
+    <div class="section">
+      <h4>Other attributes</h4>
+      ${
+        attrs.map(([k, v]) =>
+          `<div class="kv"><span>${esc(k)}</span><strong>${esc(v)}</strong></div>`
+        ).join("") ||
+        '<span class="hint">No additional simple attributes to show.</span>'
+      }
+    </div>
+
+    <p class="note">
+      Connections are recorded graph relationships; they do not automatically
+      prove influence, causation, or future success.
+    </p>
+  `;
+
+  const list = document.getElementById("neighbors");
+
+  [...others.values()].slice(0, 40).forEach(x => {
+    const button = document.createElement("button");
+    button.className = "neighbor";
+    button.textContent = `${x.name} · ${x.rel}`;
+    button.title = `${x.dir} relationship`;
+
+    button.onclick = () => {
+      document.getElementById("search").value = "";
+      document.getElementById("typeFilter").value = "All";
+      document.getElementById("yearFilter").value = "All";
+      selectedId = x.id;
+      render();
+    };
+
+    list.appendChild(button);
+  });
+}
+
+function highlight() {
+  if (!selectedId) return;
+
+  const neighborIds = new Set([selectedId]);
+
+  allLinks.forEach(e => {
+    if (e._source === selectedId) neighborIds.add(e._target);
+    if (e._target === selectedId) neighborIds.add(e._source);
+  });
+
+  svg.selectAll("circle")
+    .attr("opacity", d => neighborIds.has(d.id) ? 1 : 0.16);
+
+  svg.selectAll(".node-label")
+    .attr("opacity", d => neighborIds.has(d.id) ? 1 : 0.16);
+
+  svg.selectAll("line.link")
+    .attr("stroke", d =>
+      (sourceId(d) === selectedId || targetId(d) === selectedId)
+        ? "#e09b26"
+        : "#a8b7c9"
+    )
+    .attr("stroke-opacity", d =>
+      (sourceId(d) === selectedId || targetId(d) === selectedId) ? 0.95 : 0.22
+    );
+}
+
+function sourceId(e) {
+  return String(typeof e.source === "object" ? e.source.id : e.source);
+}
+
+function targetId(e) {
+  return String(typeof e.target === "object" ? e.target.id : e.target);
+}
+
+function drawTimeline() {
+  if (!loaded) return;
+
+  const dataMap = new Map();
+
+  allNodes.forEach(n => {
+    if (genreValue(n).toLowerCase().includes("oceanus folk") && n._year) {
+      dataMap.set(n._year, (dataMap.get(n._year) || 0) + 1);
+    }
+  });
+
+  const data = [...dataMap]
+    .map(([year, count]) => ({ year, count }))
+    .sort((a, b) => a.year - b.year);
+
+  const chart = timelineSvg;
+  const w = document.querySelector(".timeline").clientWidth || 700;
+  const h = 190;
+  const m = { top: 12, right: 15, bottom: 35, left: 40 };
+
+  chart.attr("viewBox", `0 0 ${w} ${h}`);
+  chart.selectAll("*").remove();
+
+  if (!data.length) {
+    chart.append("text")
+      .attr("x", 20)
+      .attr("y", 35)
+      .text("No Oceanus Folk release dates were found in the expected fields.");
+    return;
+  }
+
+  const shown = data.length > 45
+    ? data.filter((d, i) => i % Math.ceil(data.length / 45) === 0)
+    : data;
+
+  const x = d3.scaleBand()
+    .domain(shown.map(d => d.year))
+    .range([m.left, w - m.right])
+    .padding(0.18);
+
+  const y = d3.scaleLinear()
+    .domain([0, d3.max(shown, d => d.count) * 1.15 || 1])
+    .nice()
+    .range([h - m.bottom, m.top]);
+
+  chart.append("g")
+    .attr("transform", `translate(0,${h - m.bottom})`)
+    .call(
+      d3.axisBottom(x)
+        .tickValues(
+          shown
+            .filter((d, i) =>
+              i % Math.max(1, Math.ceil(shown.length / 12)) === 0
+            )
+            .map(d => d.year)
+        )
+        .tickFormat(d3.format("d"))
+    )
+    .call(g => g.selectAll("text").attr("fill", "#64748b").attr("font-size", 10));
+
+  chart.append("g")
+    .attr("transform", `translate(${m.left},0)`)
+    .call(d3.axisLeft(y).ticks(4))
+    .call(g => g.select(".domain").remove());
+
+  chart.selectAll("rect.bar")
+    .data(shown)
+    .join("rect")
+    .attr("class", "bar")
+    .attr("x", d => x(d.year))
+    .attr("width", x.bandwidth())
+    .attr("y", d => y(d.count))
+    .attr("height", d => y(0) - y(d.count))
+    .attr("rx", 3)
+    .attr("fill", d =>
+      String(filters().year) === String(d.year) ? "#d79b28" : "#168c8c"
+    )
+    .attr("cursor", "pointer")
+    .on("click", (event, d) => {
+      document.getElementById("yearFilter").value = String(d.year);
+      render();
+    });
+
+  chart.selectAll("text.count")
+    .data(shown.filter((d, i) => shown.length < 20 || i % 2 === 0))
+    .join("text")
+    .attr("class", "count")
+    .attr("x", d => x(d.year) + x.bandwidth() / 2)
+    .attr("y", d => y(d.count) - 4)
+    .attr("text-anchor", "middle")
+    .attr("font-size", 9)
+    .attr("fill", "#526176")
+    .text(d => d.count);
+}
+
+["search", "typeFilter", "relationFilter", "yearFilter"].forEach(id => {
+  document.getElementById(id).addEventListener(
+    id === "search" ? "input" : "change",
+    () => {
+      if (loaded) render();
+    }
+  );
+});
+
+document.getElementById("reset").addEventListener("click", () => {
+  document.getElementById("search").value = "";
+  document.getElementById("typeFilter").value = "All";
+  document.getElementById("relationFilter").value = "All";
+  document.getElementById("yearFilter").value = "All";
+
+  selectedId =
+    allNodes.find(n => n.name.trim().toLowerCase() === "sailor shift")?.id ||
+    allNodes[0]?.id ||
+    null;
+
+  if (loaded) render();
+});
+
+window.addEventListener("resize", () => {
+  if (loaded) render();
+});
+</script>
+</body>
+</html>
